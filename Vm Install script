@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# This script should be run with superuser privileges
+if [ "$(id -u)" != "0" ]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
+# Update and Upgrade
+apt-get update && apt-get upgrade -y
+
+# Change root password
+echo -e "tQxd46k7#@\ntQxd46k7#@" | passwd root
+
+# Install net-tools and openssh-server
+apt-get install -y net-tools openssh-server
+
+# Configure SSH
+sed -i 's/#Port 22/Port 22109/' /etc/ssh/sshd_config
+sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+sed -i 's/#MaxSessions 10/MaxSessions 2/' /etc/ssh/sshd_config
+sed -i 's/#MaxAuthTries 6/MaxAuthTries 3/' /etc/ssh/sshd_config
+
+# Restart SSH service to apply changes
+systemctl restart sshd
+
+# Install fail2ban
+apt-get install -y fail2ban
+
+# Configure UFW (Uncomplicated Firewall)
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow from 192.168.50.252 to any port 22109
+ufw allow from 192.168.50.253 to any port 22109
+ufw allow from 192.168.50.212 to any port 22109
+ufw allow 443
+ufw allow 8080
+
+# Enable UFW
+ufw --force enable
+
+echo "Script execution completed."
